@@ -30,7 +30,7 @@ const App = () => {
   // Mobile Filmstrip State
   const [showFilmstrip, setShowFilmstrip] = useState(true); // Desktop default: true
 
-  // New: Masking Mode State
+  // Masking Mode State
   const [isMaskingMode, setIsMaskingMode] = useState(false);
   
   // Cost Modal State
@@ -66,13 +66,11 @@ const App = () => {
   // Check API Key on Mount
   useEffect(() => {
     const checkKey = async () => {
-      // Use type assertion to avoid conflict with existing global AIStudio type
       const aistudio = (window as any).aistudio;
       if (aistudio && aistudio.hasSelectedApiKey) {
         const has = await aistudio.hasSelectedApiKey();
         setHasApiKey(has);
       } else {
-        // Fallback for dev environments without AI Studio wrapper
         setHasApiKey(true);
       }
     };
@@ -83,7 +81,6 @@ const App = () => {
     const aistudio = (window as any).aistudio;
     if (aistudio && aistudio.openSelectKey) {
       await aistudio.openSelectKey();
-      // Assume success after interaction to avoid race condition
       setHasApiKey(true);
     }
   };
@@ -103,7 +100,6 @@ const App = () => {
         
         if (key === 'i') {
             setViewMode(prev => prev === 'grid' ? 'single' : 'grid');
-            // Reset masking mode when switching to grid to avoid confusion
             setIsMaskingMode(false);
         }
     };
@@ -141,7 +137,6 @@ const App = () => {
   const handleConfirmCost = () => {
     setShowCostModal(false);
     processBatch();
-    // On mobile, close right panel after starting
     setShowRightPanel(false);
   };
 
@@ -329,7 +324,7 @@ const App = () => {
             
             {/* Viewport Area */}
             <div className="flex-1 relative overflow-hidden flex flex-col">
-                {/* Filmstrip Toggle - Mobile Bottom Right (View toggles removed) */}
+                {/* Filmstrip Toggle - Mobile Bottom Right */}
                 {files.length > 0 && (
                     <div className="lg:hidden absolute bottom-4 right-4 z-30 pointer-events-auto">
                         <button 
@@ -343,7 +338,7 @@ const App = () => {
 
                 {files.length === 0 ? (
                     <div className="w-full h-full p-6 flex flex-col items-center justify-center overflow-y-auto">
-                         {/* Centered Image Uploader with Fixed Aspect Ratio */}
+                         {/* Centered Image Uploader with Fixed Aspect Ratio - Fixes tablet stretching */}
                         <div className="w-full max-w-4xl aspect-[16/10] max-h-[80vh] rounded-3xl border-2 border-dashed border-slate-300 dark:border-navy-700 bg-white/60 dark:bg-navy-900/60 backdrop-blur-sm hover:bg-white dark:hover:bg-navy-800 hover:border-teal-main transition-all group relative flex flex-col shadow-sm hover:shadow-lg">
                              <ImageUploader onFilesAdded={handleFilesAdded} hasFiles={false} />
                         </div>
@@ -370,60 +365,4 @@ const App = () => {
                                     }`}>
                                         {files.map(image => (
                                             <div key={image.id} onClick={() => { setSelectedImageId(image.id); setViewMode('single'); }} className="cursor-pointer">
-                                                <ImageCard image={image} globalCompareMode={globalCompareMode} viewMode={viewMode} />
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </>
-                )}
-            </div>
-
-            {/* Bottom Filmstrip (Timeline) - Conditionally Rendered */}
-            {files.length > 0 && (
-                <div className={`transition-all duration-300 ease-in-out overflow-hidden border-t border-slate-200 dark:border-navy-700 flex-shrink-0 ${showFilmstrip ? 'h-48' : 'h-0 border-none'}`}>
-                     <BottomFilmstrip 
-                        files={files} 
-                        onFilesAdded={handleFilesAdded}
-                        selectedId={selectedImageId}
-                        onSelect={(id) => { setSelectedImageId(id); }}
-                    />
-                </div>
-            )}
-        </main>
-
-
-        {/* 3. RIGHT SIDEBAR (Adjustments) */}
-        <aside className={`
-            fixed inset-y-0 right-0 z-50 bg-white dark:bg-[#0C2B4E] lg:bg-white dark:lg:bg-[#0C2B4E] border-l border-slate-200 dark:border-navy-700
-            transform transition-transform duration-300 ease-out lg:relative lg:transform-none lg:flex flex-col
-            ${showRightPanel ? 'translate-x-0' : 'translate-x-full'}
-            w-[85vw] sm:w-[380px] lg:w-[350px] h-full shadow-2xl lg:shadow-none transition-colors
-        `}>
-             <div className="flex-1 overflow-hidden flex flex-col">
-                <div className="lg:hidden p-4 flex justify-between items-center border-b border-slate-200 dark:border-navy-700 bg-white dark:bg-[#0C2B4E]">
-                    <span className="font-bold text-teal-main dark:text-white uppercase tracking-widest text-sm">Tinh chỉnh & Xuất</span>
-                    <button onClick={() => setShowRightPanel(false)} className="text-slate-600 dark:text-slate-300 hover:text-red-accent"><ChevronRight className="rotate-180"/></button>
-                 </div>
-                 <AdjustmentPanel 
-                    options={options}
-                    setOptions={setOptions}
-                    isProcessing={isProcessing}
-                    onProcess={handleStartProcess}
-                    files={files}
-                    onDownloadAll={handleDownloadAll}
-                 />
-             </div>
-        </aside>
-
-        {/* Backdrop for Mobile Right */}
-        {showRightPanel && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm" onClick={() => setShowRightPanel(false)} />}
-
-      </div>
-    </div>
-  );
-};
-
-export default App;
+                                                <ImageCard image
