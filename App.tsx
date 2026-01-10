@@ -365,4 +365,60 @@ const App = () => {
                                     }`}>
                                         {files.map(image => (
                                             <div key={image.id} onClick={() => { setSelectedImageId(image.id); setViewMode('single'); }} className="cursor-pointer">
-                                                <ImageCard image
+                                                <ImageCard image={image} globalCompareMode={globalCompareMode} viewMode={viewMode} />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </>
+                )}
+            </div>
+
+            {/* Bottom Filmstrip (Timeline) - Conditionally Rendered */}
+            {files.length > 0 && (
+                <div className={`transition-all duration-300 ease-in-out overflow-hidden border-t border-slate-200 dark:border-navy-700 flex-shrink-0 ${showFilmstrip ? 'h-48' : 'h-0 border-none'}`}>
+                     <BottomFilmstrip 
+                        files={files} 
+                        onFilesAdded={handleFilesAdded}
+                        selectedId={selectedImageId}
+                        onSelect={(id) => { setSelectedImageId(id); }}
+                    />
+                </div>
+            )}
+        </main>
+
+
+        {/* 3. RIGHT SIDEBAR (Adjustments) */}
+        <aside className={`
+            fixed inset-y-0 right-0 z-50 bg-white dark:bg-[#0C2B4E] lg:bg-white dark:lg:bg-[#0C2B4E] border-l border-slate-200 dark:border-navy-700
+            transform transition-transform duration-300 ease-out lg:relative lg:transform-none lg:flex flex-col
+            ${showRightPanel ? 'translate-x-0' : 'translate-x-full'}
+            w-[85vw] sm:w-[380px] lg:w-[350px] h-full shadow-2xl lg:shadow-none transition-colors
+        `}>
+             <div className="flex-1 overflow-hidden flex flex-col">
+                <div className="lg:hidden p-4 flex justify-between items-center border-b border-slate-200 dark:border-navy-700 bg-white dark:bg-[#0C2B4E]">
+                    <span className="font-bold text-teal-main dark:text-white uppercase tracking-widest text-sm">Tinh chỉnh & Xuất</span>
+                    <button onClick={() => setShowRightPanel(false)} className="text-slate-600 dark:text-slate-300 hover:text-red-accent"><ChevronRight className="rotate-180"/></button>
+                 </div>
+                 <AdjustmentPanel 
+                    options={options}
+                    setOptions={setOptions}
+                    isProcessing={isProcessing}
+                    onProcess={handleStartProcess}
+                    files={files}
+                    onDownloadAll={handleDownloadAll}
+                 />
+             </div>
+        </aside>
+
+        {/* Backdrop for Mobile Right */}
+        {showRightPanel && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm" onClick={() => setShowRightPanel(false)} />}
+
+      </div>
+    </div>
+  );
+};
+
+export default App;
