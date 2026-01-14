@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { ImageFile } from '../types';
 import { Download, Eraser, MoveHorizontal, Check, ZoomIn, ZoomOut, Trash2, Brush, Wand2, X } from 'lucide-react';
@@ -223,16 +224,33 @@ export const ImageCard: React.FC<ImageCardProps> = ({
               const img = imageRef.current;
               const canvas = canvasRef.current;
               
-              // 1. Set internal resolution (high quality)
+              // 1. Set internal resolution (match natural image size)
               if (canvas.width !== img.naturalWidth || canvas.height !== img.naturalHeight) {
                 canvas.width = img.naturalWidth;
                 canvas.height = img.naturalHeight;
               }
 
-              // 2. Set display size (CSS) to match the rendered image exactly
-              // This ensures getBoundingClientRect on canvas matches visual image
-              canvas.style.width = `${img.width}px`;
-              canvas.style.height = `${img.height}px`;
+              // 2. Calculate Visual Size (Fit Contain Logic)
+              // Since we use w-full h-full object-contain, the visual image might be smaller than the element
+              const containerRect = img.getBoundingClientRect();
+              const containerAspect = containerRect.width / containerRect.height;
+              const imageAspect = img.naturalWidth / img.naturalHeight;
+
+              let renderWidth, renderHeight;
+
+              if (containerAspect > imageAspect) {
+                  // Container is wider than image -> Constrained by Height
+                  renderHeight = containerRect.height;
+                  renderWidth = containerRect.height * imageAspect;
+              } else {
+                  // Container is taller than image -> Constrained by Width
+                  renderWidth = containerRect.width;
+                  renderHeight = containerRect.width / imageAspect;
+              }
+
+              // 3. Set display size (CSS) to match the VISUAL image exactly
+              canvas.style.width = `${renderWidth}px`;
+              canvas.style.height = `${renderHeight}px`;
               
               const ctx = canvas.getContext('2d');
               if (ctx) {
@@ -248,8 +266,15 @@ export const ImageCard: React.FC<ImageCardProps> = ({
       // Watch for resize
       const observer = new ResizeObserver(syncCanvasSize);
       if (imageRef.current) observer.observe(imageRef.current);
+      // Also observe container
+      if (containerRef.current) observer.observe(containerRef.current);
 
-      return () => observer.disconnect();
+      window.addEventListener('resize', syncCanvasSize);
+
+      return () => {
+          observer.disconnect();
+          window.removeEventListener('resize', syncCanvasSize);
+      };
   }, [isMaskingMode, viewMode, image.previewUrl, scale, translate]);
 
   const getCanvasCoordinates = (clientX: number, clientY: number) => {
@@ -392,11 +417,11 @@ export const ImageCard: React.FC<ImageCardProps> = ({
              >
                 {/* BRANCH 1: COMPARE MODE */}
                 {isCompleted && showOriginal && !isMaskingMode && !isZoomMode ? (
-                    <div className="relative max-w-full max-h-full flex items-center justify-center">
+                    <div className="relative w-full h-full flex items-center justify-center">
                         <img 
                             src={image.resultUrl} 
                             alt="After" 
-                            className="max-w-full max-h-full object-contain pointer-events-none select-none block" 
+                            className="w-full h-full object-contain pointer-events-none select-none block" 
                             draggable={false} 
                         />
                         <div 
@@ -406,7 +431,7 @@ export const ImageCard: React.FC<ImageCardProps> = ({
                              <img 
                                 src={image.previewUrl} 
                                 alt="Before" 
-                                className="max-w-full max-h-full object-contain pointer-events-none select-none block"
+                                className="w-full h-full object-contain pointer-events-none select-none block"
                                 draggable={false}
                             />
                         </div>
@@ -424,12 +449,13 @@ export const ImageCard: React.FC<ImageCardProps> = ({
                     </div>
                 ) : (
                     /* BRANCH 2: SINGLE IMAGE / ZOOM VIEW / MASK MODE */
-                    <div className="relative flex items-center justify-center max-w-full max-h-full">
+                    /* Force w-full h-full object-contain to ensure NO cropping */
+                    <div className="relative flex items-center justify-center w-full h-full">
                         <img 
                             ref={imageRef} 
                             src={(!isCompleted) ? image.previewUrl : image.resultUrl} 
                             alt="View" 
-                            className="max-w-full max-h-full object-contain block select-none" 
+                            className="w-full h-full object-contain block select-none" 
                             draggable={false} 
                         />
                         {isMaskingMode && !isZoomMode && (
@@ -439,7 +465,7 @@ export const ImageCard: React.FC<ImageCardProps> = ({
                                 style={{ 
                                     // Transform logic here ensures strict overlap regardless of flex parent
                                     transform: 'translate(-50%, -50%)',
-                                    // Width/Height are set by JS logic to match rendered img exactly
+                                    // Width/Height are set by JS logic in syncCanvasSize to match visually rendered img exactly
                                 }}
                                 onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseLeave={stopDrawing} onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing}
                             />

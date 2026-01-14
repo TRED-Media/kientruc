@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ImageFile } from '../types';
 import { Plus, Check, AlertCircle, Film, X } from 'lucide-react';
@@ -40,13 +41,13 @@ export const BottomFilmstrip: React.FC<BottomFilmstripProps> = ({ files, onFiles
                     onClick={() => onSelect && onSelect(file.id)}
                     className="shrink-0 w-32 flex flex-col gap-2 group cursor-pointer relative h-full justify-center pb-2"
                 >
-                    <div className={`relative aspect-[4/3] w-full rounded-xl overflow-hidden transition-all duration-200
+                    <div className={`relative aspect-[4/3] w-full rounded-xl overflow-hidden transition-all duration-200 bg-slate-100 dark:bg-navy-900
                         ${isSelected ? 'ring-2 ring-teal-main ring-offset-2 dark:ring-offset-navy-900 shadow-lg scale-[1.02]' : 'ring-1 ring-slate-200 dark:ring-navy-600 opacity-90 hover:opacity-100 hover:scale-[1.02]'}
                     `}>
                         <img 
                             src={file.status === 'completed' && file.resultUrl ? file.resultUrl : file.previewUrl} 
                             alt="thumb" 
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-contain bg-slate-50 dark:bg-black/20"
                         />
                         
                         {/* Status Overlays */}
