@@ -1,21 +1,25 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { ProcessingOptions, ProjectState, SkyReplacement } from "../types";
 import { SYSTEM_INSTRUCTION_HEADER } from "../constants";
 
 const getClient = () => {
-  // Ưu tiên lấy từ biến môi trường (Vercel/Netlify)
+  // The API key must be obtained exclusively from the environment variable process.env.API_KEY.
   const apiKey = process.env.API_KEY;
   
-  // Log trạng thái Key (ẩn ký tự để bảo mật)
+  // Log trạng thái (Chỉ log 4 ký tự cuối để bảo mật trên Console Production)
   if (apiKey) {
-      console.log("API Key loaded: ", apiKey.substring(0, 4) + "..." + apiKey.slice(-4));
+      const maskedKey = apiKey.length > 8 
+        ? `******${apiKey.slice(-4)}` 
+        : '******';
+      console.log("[GeminiService] API Key Status: Present", maskedKey);
   } else {
-      console.error("API Key MISSING in process.env.API_KEY");
+      console.error("[GeminiService] API Key Status: MISSING. Environment variables not injected correctly.");
   }
 
+  // Assume variable is pre-configured, valid, and accessible.
+  // We throw if missing to fail fast, but we rely on injection.
   if (!apiKey) {
-    throw new Error("Lỗi Cấu hình: Không tìm thấy API KEY. Nếu bạn deploy trên Vercel, hãy vào Settings > Environment Variables và thêm 'API_KEY'.");
+    throw new Error("Missing API_KEY in environment.");
   }
   return new GoogleGenAI({ apiKey });
 };
@@ -163,7 +167,9 @@ export const processImageWithGemini = async (
   } catch (error: any) {
       console.error("Gemini API Error Detail:", error);
       
-      if (error.message?.includes('API Key')) throw new Error("Lỗi API Key: Vui lòng kiểm tra biến môi trường.");
+      if (error.message?.includes('API Key') || error.message?.includes('Deployment')) {
+         throw new Error("Lỗi API Key: Vui lòng kiểm tra biến môi trường API_KEY.");
+      }
       if (error.status === 503) throw new Error("Server Gemini đang quá tải (503). Vui lòng thử lại sau giây lát.");
       if (error.status === 400) throw new Error("Lỗi Request (400): Có thể do Prompt hoặc Cấu hình không hợp lệ.");
       
