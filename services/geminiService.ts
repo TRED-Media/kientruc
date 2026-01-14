@@ -4,9 +4,18 @@ import { ProcessingOptions, ProjectState, SkyReplacement } from "../types";
 import { SYSTEM_INSTRUCTION_HEADER } from "../constants";
 
 const getClient = () => {
+  // Ưu tiên lấy từ biến môi trường (Vercel/Netlify)
   const apiKey = process.env.API_KEY;
+  
+  // Log trạng thái Key (ẩn ký tự để bảo mật)
+  if (apiKey) {
+      console.log("API Key loaded: ", apiKey.substring(0, 4) + "..." + apiKey.slice(-4));
+  } else {
+      console.error("API Key MISSING in process.env.API_KEY");
+  }
+
   if (!apiKey) {
-    throw new Error("Lỗi Deploy: Không tìm thấy API KEY. Vui lòng cấu hình biến môi trường process.env.API_KEY hoặc chọn Key qua UI.");
+    throw new Error("Lỗi Cấu hình: Không tìm thấy API KEY. Nếu bạn deploy trên Vercel, hãy vào Settings > Environment Variables và thêm 'API_KEY'.");
   }
   return new GoogleGenAI({ apiKey });
 };
@@ -20,7 +29,7 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
-// AUTO DETECT ASPECT RATIO to avoid 1:1 cropping
+// Auto Aspect Ratio Detection
 const getBestAspectRatio = (width: number, height: number): string => {
     const ratio = width / height;
     if (ratio >= 1.6) return '16:9'; 
@@ -34,7 +43,7 @@ const getImageDimensions = (file: File): Promise<{width: number, height: number}
     return new Promise((resolve) => {
         const img = new Image();
         img.onload = () => resolve({ width: img.width, height: img.height });
-        img.onerror = () => resolve({ width: 1000, height: 1000 }); // Fallback
+        img.onerror = () => resolve({ width: 1000, height: 1000 });
         img.src = URL.createObjectURL(file);
     });
 };
@@ -43,28 +52,33 @@ const formatOptionsForPrompt = (options: ProcessingOptions): string => {
   const tasks: string[] = [];
 
   // 1. GEOMETRY
-  if (options.AutoVerticals) tasks.push("- Làm thẳng tường và cột (Verticals).");
-  if (options.AutoPerspectiveCorrection) tasks.push("- Cân đối phối cảnh.");
+  if (options.AutoVerticals) tasks.push("- GEOMETRY: Làm thẳng tường và cột (Verticals correction).");
+  if (options.AutoPerspectiveCorrection) tasks.push("- PERSPECTIVE: Cân đối phối cảnh 3D.");
 
-  // 2. CLEANING - SAFE WORDS
+  // 2. CLEANING (Sử dụng từ ngữ an toàn)
   if (options.CleanWalls !== 'OFF') {
-      const strength = options.CleanWalls === 'STRONG' ? "Phục hồi kỹ thuật số (Digital Restoration)" : "Làm sạch";
-      tasks.push(`- Tường: ${strength}. Loại bỏ mốc/bẩn. Giữ nguyên màu sơn gốc. Phân tích bề mặt và tái tạo độ mịn.`);
+      const strength = options.CleanWalls === 'STRONG' ? "Phục hồi kỹ thuật số (Digital Restoration)" : "Làm sạch bề mặt";
+      tasks.push(`- WALLS: ${strength}. Phân tích và xử lý bề mặt tường cũ, mốc. Giữ nguyên màu sơn gốc.`);
   }
   if (options.CleanPaving !== 'OFF') {
-      tasks.push(`- Sàn/Nền: Làm sạch vết ố, làm mới ron gạch. Giữ nguyên vật liệu.`);
+      tasks.push(`- FLOORS: Làm sạch sàn, xử lý vết ố. Giữ nguyên vật liệu.`);
   }
-  if (options.CleanTrash) tasks.push("- Xóa rác và vật thể lạ trên sàn.");
-  if (options.RemovePowerLines) tasks.push("- Xóa dây điện.");
+  if (options.CleanTrash) tasks.push("- CLEANING: Xóa rác và vật thể thừa.");
+  if (options.RemovePowerLines) tasks.push("- REMOVAL: Xóa dây điện.");
 
   // 3. LIGHTING
-  if (options.AutoHDRBatch !== 'OFF') tasks.push("- Auto HDR: Cân bằng sáng tối.");
-  if (options.LightsOnOffMode === 'ON') tasks.push("- Bật đèn nội thất.");
+  if (options.AutoHDRBatch !== 'OFF') tasks.push("- LIGHTING: Auto HDR, cân bằng sáng tối, giữ chi tiết.");
+  if (options.LightsOnOffMode === 'ON') tasks.push("- INTERIOR LIGHTS: Bật đèn nội thất để tăng sự ấm cúng.");
   
   // 4. SKY
   if (options.SkyReplacement !== 'OFF') {
       const sky = options.SkyReplacement === 'CUSTOM' ? options.SkyCustomPrompt : options.SkyReplacement;
-      tasks.push(`- Thay bầu trời: ${sky}. Match ánh sáng.`);
+      tasks.push(`- SKY REPLACEMENT: Thay bầu trời thành '${sky}'. Match ánh sáng tiền cảnh.`);
+  }
+
+  // 5. STAGING
+  if (options.AddPeople !== 'OFF') {
+     tasks.push(`- STAGING: Thêm người (${options.AddPeople}, phong cách ${options.PeopleStyle}) tương tác tự nhiên.`);
   }
 
   return tasks.join('\n');
@@ -81,7 +95,7 @@ export const processImageWithGemini = async (
   const mimeType = file.type || 'image/jpeg';
   const modelId = 'gemini-3-pro-image-preview';
   
-  // Auto Aspect Ratio
+  // Tính toán tỷ lệ ảnh
   let aspectRatio = projectState.options.AspectRatio !== 'ORIGINAL' ? projectState.options.AspectRatio : undefined;
   if (!aspectRatio) {
       const dims = await getImageDimensions(file);
@@ -91,34 +105,29 @@ export const processImageWithGemini = async (
   const requestConfig: any = {
       imageConfig: {
           imageSize: projectState.options.Resolution,
+          // Chỉ thêm aspectRatio nếu có giá trị hợp lệ
           ...(aspectRatio && { aspectRatio: aspectRatio })
       },
-      // Use permissive safety settings to prevent false positives on architecture
-      safetySettings: [
-        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
-      ]
+      // LƯU Ý: Đã loại bỏ safetySettings vì một số model Image Preview không hỗ trợ hoặc gây lỗi 400 Bad Request
   };
   
   let promptParts: any[] = [];
 
   if (maskData) {
-      // EDIT MODE
+      // CHẾ ĐỘ CHỈNH SỬA (Mask)
       const instruction = maskPrompt 
         ? `GENERATIVE FILL: Tại vùng mask đỏ, hãy vẽ: "${maskPrompt}".` 
-        : `REMOVE OBJECT: Xóa vật thể trong vùng mask đỏ. Inpaint nền.`;
+        : `REMOVE OBJECT: Xóa vật thể trong vùng mask đỏ. Inpaint nền liền mạch.`;
       
       promptParts = [
           { inlineData: { mimeType, data: base64Data } },
           { inlineData: { mimeType: 'image/png', data: maskData.split(',')[1] } },
-          { text: SYSTEM_INSTRUCTION_HEADER + "\n" + instruction }
+          { text: `${SYSTEM_INSTRUCTION_HEADER}\n\n${instruction}` }
       ];
   } else {
-      // GENERATE MODE
+      // CHẾ ĐỘ TẠO MỚI (Full Image)
       const tasks = formatOptionsForPrompt(projectState.options);
-      const fullPrompt = `${SYSTEM_INSTRUCTION_HEADER}\n\nNHIỆM VỤ:\n${tasks}\n\nGhi chú thêm: ${projectState.extraPrompt || 'Không'}`;
+      const fullPrompt = `${SYSTEM_INSTRUCTION_HEADER}\n\n[NHIỆM VỤ CỤ THỂ]:\n${tasks}\n\n[GHI CHÚ THÊM]: ${projectState.extraPrompt || 'Không có'}`;
       
       promptParts = [
           { inlineData: { mimeType, data: base64Data } },
@@ -127,6 +136,8 @@ export const processImageWithGemini = async (
   }
 
   try {
+      console.log(`Calling Gemini Model: ${modelId} with AspectRatio: ${aspectRatio}`);
+      
       const response = await ai.models.generateContent({
         model: modelId,
         contents: [{ parts: promptParts }],
@@ -140,12 +151,22 @@ export const processImageWithGemini = async (
           }
         }
       }
-      throw new Error("AI không trả về ảnh. Có thể do lỗi Prompt hoặc Server quá tải.");
+      
+      // Nếu không có ảnh, kiểm tra xem có text từ chối không
+      const textPart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.text);
+      if (textPart) {
+          throw new Error(`AI Refusal: ${textPart.text}`);
+      }
+
+      throw new Error("AI không trả về dữ liệu ảnh. (Empty Response)");
+      
   } catch (error: any) {
-      console.error("Gemini Error:", error);
-      // Nice error message for users
-      if (error.message.includes('API Key')) throw new Error("Chưa có API Key. Vui lòng kiểm tra cấu hình.");
-      if (error.status === 503) throw new Error("Server Gemini đang bận (503). Vui lòng thử lại sau 30s.");
+      console.error("Gemini API Error Detail:", error);
+      
+      if (error.message?.includes('API Key')) throw new Error("Lỗi API Key: Vui lòng kiểm tra biến môi trường.");
+      if (error.status === 503) throw new Error("Server Gemini đang quá tải (503). Vui lòng thử lại sau giây lát.");
+      if (error.status === 400) throw new Error("Lỗi Request (400): Có thể do Prompt hoặc Cấu hình không hợp lệ.");
+      
       throw error;
   }
 };
