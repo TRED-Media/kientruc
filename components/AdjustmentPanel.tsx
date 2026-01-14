@@ -73,9 +73,10 @@ const skyMap: Record<string, string> = {
     'GOLDEN_HOUR': 'Hoàng hôn (Vàng)',
     'DRAMATIC_CLOUDY': 'Mây kịch tính',
     'NIGHT_LUXURY': 'Đêm Luxury (Sao)',
+    'CUSTOM': 'Tùy chỉnh (Nhập Prompt)',
 };
 const wbMap: Record<string, string> = { 'ARCHITECTURAL_NEUTRAL': 'Trung tính (Chuẩn)', 'WARM': 'Tone Ấm', 'COOL': 'Tone Lạnh' };
-const lightsMap: Record<string, string> = { 'OFF': 'Tắt hết', 'ON': 'Bật hết', 'MIXED': 'Hỗn hợp' };
+const lightsMap: Record<string, string> = { 'OFF': 'Tắt hết', 'ON': 'Bật hết', 'MIXED': 'Hỗn hợp', 'ORIGINAL': 'Giữ nguyên' };
 const d2nMap: Record<string, string> = { 'OFF': 'Giữ nguyên', 'MORNING': 'Sáng', 'NOON': 'Trưa', 'AFTERNOON': 'Chiều', 'GOLDEN_HOUR': 'Giờ vàng', 'BLUE_HOUR': 'Giờ xanh', 'NIGHT': 'Tối' };
 const peopleMap: Record<string, string> = { 'OFF': 'Không', 'LOW': 'Ít', 'MEDIUM': 'Vừa', 'HIGH': 'Đông' };
 const peopleStyleMap: Record<string, string> = { 'BUSINESS': 'Công sở', 'RESIDENTS': 'Đời thường', 'FAMILY': 'Gia đình', 'TOURISTS': 'Du lịch', 'LIFESTYLE_MINIMAL': 'Tối giản' };
@@ -128,7 +129,7 @@ export const AdjustmentPanel: React.FC<AdjustmentPanelProps> = ({
   return (
     <div className="w-full h-full flex flex-col bg-white dark:bg-[#0C2B4E] transition-colors">
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 custom-scrollbar overscroll-y-contain">
             
             {/* OUTPUT SETTINGS (Moved from ControlPanel) */}
              <div className="mb-6">
@@ -172,6 +173,19 @@ export const AdjustmentPanel: React.FC<AdjustmentPanelProps> = ({
             <div className="bg-white dark:bg-navy-800 border border-slate-200 dark:border-navy-700 rounded-xl p-4 shadow-sm transition-colors">
                 <StyledSelect label="Thay thế bầu trời" value={options.SkyReplacement} options={Object.values(SkyReplacement)} displayMap={skyMap} onChange={handleSkyChange} />
                 
+                {/* Custom Sky Prompt Input */}
+                {options.SkyReplacement === SkyReplacement.CUSTOM && (
+                    <div className="mb-4">
+                        <label className="block text-[10px] text-teal-main dark:text-slate-400 mb-2 uppercase font-bold tracking-wider">Mô tả bầu trời mong muốn</label>
+                        <textarea
+                            value={options.SkyCustomPrompt}
+                            onChange={(e) => updateOption('SkyCustomPrompt', e.target.value)}
+                            placeholder="VD: Bầu trời hoàng hôn tím hồng, mây thưa..."
+                            className="w-full bg-slate-50 dark:bg-navy-900 text-slate-900 dark:text-white text-xs font-medium p-3 rounded-xl border border-slate-200 dark:border-navy-600 focus:border-teal-main focus:ring-1 focus:ring-teal-main focus:outline-none h-20 resize-none"
+                        />
+                    </div>
+                )}
+
                 {options.SkyReplacement !== SkyReplacement.OFF && (
                     <div className="mt-4 pt-4 border-t border-slate-200 dark:border-navy-600">
                         <div className="flex justify-between items-center mb-2">
@@ -227,7 +241,7 @@ export const AdjustmentPanel: React.FC<AdjustmentPanelProps> = ({
         </div>
 
         {/* FOOTER ACTION */}
-        <div className="p-5 border-t border-slate-200 dark:border-navy-700 bg-white dark:bg-[#0C2B4E] flex flex-col gap-4 relative z-10 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] transition-colors">
+        <div className="p-5 border-t border-slate-200 dark:border-navy-700 bg-white dark:bg-[#0C2B4E] flex flex-col gap-4 relative z-10 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] transition-colors shrink-0">
              
              {/* Cost Info */}
              {!isProcessing && completedCount === 0 && (

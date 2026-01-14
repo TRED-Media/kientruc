@@ -1,9 +1,15 @@
+
 <!DOCTYPE html>
 <html lang="vi">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>T-RED KIẾN TRÚC AI PRO</title>
+    <meta name="description" content="Hệ thống xử lý ảnh kiến trúc chuyên nghiệp sử dụng AI (Gemini Pro Vision). Tự động cân bằng sáng, dựng hình và làm sạch không gian.">
+    
+    <!-- Favicon (Emoji for simplicity in single file) -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏗️</text></svg>">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -31,6 +37,9 @@
                 800: '#1E293B',
                 900: '#0F172A',
               }
+            },
+            animation: {
+              'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
             }
           }
         }
@@ -43,6 +52,8 @@
         color: #0F172A;
         overflow: hidden; 
         transition: background-color 0.2s ease, color 0.2s ease;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
       }
 
       /* Dark Mode Body Override */

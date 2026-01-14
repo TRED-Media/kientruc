@@ -1,3 +1,4 @@
+
 import React, { useRef } from 'react';
 import { ProcessingOptions, OutputResolution, AspectRatio } from '../types';
 import { Camera, Zap, Briefcase, FileText, Eraser, Aperture, UploadCloud, Home, ChevronDown } from 'lucide-react';
@@ -52,7 +53,12 @@ const Select = ({ label, value, options, onChange, displayMap }: { label: string
 );
 
 // Mappings...
-const levelMapLowMedStrong: Record<string, string> = { 'LOW': 'Nhẹ', 'MEDIUM': 'Vừa', 'STRONG': 'Mạnh' };
+const levelMapClean: Record<string, string> = { 
+  'OFF': 'Giữ nguyên (Gốc)', 
+  'LOW': 'Nhẹ (50%) - Vệ sinh nhẹ', 
+  'MEDIUM': 'Vừa (100%) - Chuẩn', 
+  'STRONG': 'Mạnh (200%) - Đại tu (New)' 
+};
 const smoothMap: Record<string, string> = { 'OFF': 'Tắt', 'LOW': 'Nhẹ', 'MEDIUM': 'Vừa', 'STRONG': 'Mạnh' };
 
 export const ControlPanel: React.FC<ControlPanelProps> = ({
@@ -81,7 +87,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
 
   return (
     <div className="w-full h-full flex flex-col bg-white dark:bg-[#0C2B4E] transition-colors">
-      <div className="flex-1 overflow-y-auto p-5 custom-scrollbar pb-20">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-5 custom-scrollbar pb-24 overscroll-y-contain">
         
         {/* IMPORT */}
         <button 
@@ -147,8 +153,23 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                 <Toggle label="Xóa rác & Vật thể lạ (Auto)" value={options.CleanTrash} onChange={(v) => updateOption('CleanTrash', v)} />
                 <Toggle label="Xóa dây điện" value={options.RemovePowerLines} onChange={(v) => updateOption('RemovePowerLines', v)} />
                 <Toggle label="Xóa đốm bẩn Sensor" value={options.RemoveSensorSpots} onChange={(v) => updateOption('RemoveSensorSpots', v)} />
-                <Select label="Làm sạch tường" value={options.CleanWalls} options={['LOW', 'MEDIUM', 'STRONG']} displayMap={levelMapLowMedStrong} onChange={(v) => updateOption('CleanWalls', v)} />
-                <Select label="Làm sạch sàn/đường" value={options.CleanPaving} options={['LOW', 'MEDIUM', 'STRONG']} displayMap={levelMapLowMedStrong} onChange={(v) => updateOption('CleanPaving', v)} />
+                
+                {/* Advanced Cleaning Levels */}
+                <Select 
+                  label="Làm sạch tường (Vết nứt/Mốc)" 
+                  value={options.CleanWalls} 
+                  options={['OFF', 'LOW', 'MEDIUM', 'STRONG']} 
+                  displayMap={levelMapClean} 
+                  onChange={(v) => updateOption('CleanWalls', v)} 
+                />
+                <Select 
+                  label="Làm sạch Sàn & Nền (Vết nước/ố)" 
+                  value={options.CleanPaving} 
+                  options={['OFF', 'LOW', 'MEDIUM', 'STRONG']} 
+                  displayMap={levelMapClean} 
+                  onChange={(v) => updateOption('CleanPaving', v)} 
+                />
+                
                 <Select label="Làm phẳng vải" value={options.SmoothSoftSurfaces} options={['OFF', 'LOW', 'MEDIUM', 'STRONG']} displayMap={smoothMap} onChange={(v) => updateOption('SmoothSoftSurfaces', v)} />
             </div>
         </div>
@@ -170,8 +191,8 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
       </div>
       
       {/* VERSION */}
-      <div className="p-4 border-t border-slate-200 dark:border-navy-700 bg-white dark:bg-[#0C2B4E] text-[9px] text-teal-main dark:text-slate-500 text-center font-mono transition-colors">
-        CORE: GEMINI 3 PRO / BUILD: 3.3.0
+      <div className="p-4 border-t border-slate-200 dark:border-navy-700 bg-white dark:bg-[#0C2B4E] text-[9px] text-teal-main dark:text-slate-500 text-center font-mono transition-colors shrink-0">
+        CORE: GEMINI 3 PRO / BUILD: 1.0.0 (OFFICIAL)
       </div>
     </div>
   );

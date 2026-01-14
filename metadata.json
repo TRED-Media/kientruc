@@ -1,5 +1,6 @@
+
 {
-  "name": "T-Red Kiến Trúc",
-  "description": "Công cụ xử lý ảnh kiến trúc hàng loạt chuyên nghiệp T-RED.",
+  "name": "T-Red Kiến Trúc AI Pro",
+  "description": "Nền tảng xử lý ảnh kiến trúc hàng loạt chuyên nghiệp sử dụng Gemini 3 Pro Vision. Tự động cân bằng sáng, dựng hình, làm sạch và diễn họa không gian.",
   "requestFramePermissions": []
 }

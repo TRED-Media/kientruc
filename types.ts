@@ -5,7 +5,8 @@ export enum SkyReplacement {
   SOFT_OVERCAST = 'SOFT_OVERCAST',
   GOLDEN_HOUR = 'GOLDEN_HOUR',
   DRAMATIC_CLOUDY = 'DRAMATIC_CLOUDY',
-  NIGHT_LUXURY = 'NIGHT_LUXURY', // New: Bầu trời tối
+  NIGHT_LUXURY = 'NIGHT_LUXURY',
+  CUSTOM = 'CUSTOM', // New: Tùy chỉnh prompt
 }
 
 export enum AutoWhiteBalance {
@@ -18,6 +19,7 @@ export enum LightsOnOffMode {
   OFF = 'OFF',
   ON = 'ON',
   MIXED = 'MIXED',
+  ORIGINAL = 'ORIGINAL', // New: Giữ nguyên
 }
 
 export enum DayToNightMode {
@@ -60,16 +62,16 @@ export type AspectRatio = 'ORIGINAL' | '16:9' | '9:16' | '4:3' | '3:4' | '3:2' |
 export interface ProcessingOptions {
   // Model removed from here
   Resolution: OutputResolution;
-  AspectRatio: AspectRatio; // New field
+  AspectRatio: AspectRatio;
 
   // Cleaning
   CleanTrash: boolean;
   RemovePowerLines: boolean;
-  RemoveSensorSpots: boolean; // New: Sensor dust
-  CleanPaving: 'LOW' | 'MEDIUM' | 'STRONG';
-  CleanWalls: 'LOW' | 'MEDIUM' | 'STRONG';
-  CleanGlass: 'LOW' | 'MEDIUM' | 'STRONG';
-  CleanGroundTiles: 'LOW' | 'MEDIUM' | 'STRONG';
+  RemoveSensorSpots: boolean;
+  CleanPaving: 'OFF' | 'LOW' | 'MEDIUM' | 'STRONG';
+  CleanWalls: 'OFF' | 'LOW' | 'MEDIUM' | 'STRONG';
+  CleanGlass: 'OFF' | 'LOW' | 'MEDIUM' | 'STRONG';
+  CleanGroundTiles: 'OFF' | 'LOW' | 'MEDIUM' | 'STRONG'; // Kept for compatibility but types unified
   RemoveUrbanNoise: 'LOW' | 'MEDIUM' | 'STRONG';
   
   // Geometry
@@ -81,13 +83,14 @@ export interface ProcessingOptions {
   // Lighting & HDR
   AutoHDRBatch: 'OFF' | 'LOW' | 'MEDIUM' | 'STRONG';
   AutoWhiteBalance: AutoWhiteBalance;
-  OptimizeInterior: boolean; // New: Chế độ nội thất kín
+  OptimizeInterior: boolean;
 
   // Environment
   SkyReplacement: SkyReplacement;
-  SkyStrength: number; // New: Độ mạnh bầu trời (0-100)
+  SkyCustomPrompt: string; // New: Prompt tùy chỉnh cho bầu trời
+  SkyStrength: number;
   MatchLightDirectionToOriginal: boolean;
-  CPLFilterEffect: boolean; // New: See through glass/water
+  CPLFilterEffect: boolean;
 
   // Soft Surfaces
   SmoothSoftSurfaces: 'OFF' | 'LOW' | 'MEDIUM' | 'STRONG';
@@ -119,5 +122,5 @@ export interface ImageFile {
   status: 'pending' | 'processing' | 'completed' | 'error';
   resultUrl?: string;
   errorMsg?: string;
-  maskData?: string; // Base64 of the red mask overlay for manual removal
+  maskData?: string;
 }

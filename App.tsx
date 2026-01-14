@@ -51,8 +51,9 @@ const App = () => {
   // Responsive Init
   useEffect(() => {
       const handleResize = () => {
-          if (window.innerWidth < 1024) {
-              setShowFilmstrip(false); // Hide on mobile by default
+          // Changed breakpoint to 1280px (xl) to accommodate iPad Pro Portrait and landscape tablets better
+          if (window.innerWidth < 1280) {
+              setShowFilmstrip(false); // Hide on mobile/tablet by default
           } else {
               setShowFilmstrip(true);
           }
@@ -122,10 +123,28 @@ const App = () => {
 
     if (newImageFiles.length > 0) {
         setSelectedImageId(newImageFiles[0].id);
-        // On mobile, if first file added, open filmstrip briefly or switch to single view
-        if (window.innerWidth < 1024) setShowFilmstrip(true);
+        // On mobile/tablet, if first file added, open filmstrip briefly or switch to single view
+        if (window.innerWidth < 1280) setShowFilmstrip(true);
     }
     setViewMode('single');
+  };
+
+  const handleDeleteImage = (id: string) => {
+    setFiles(prev => {
+        const newFiles = prev.filter(f => f.id !== id);
+        
+        // If we deleted the currently selected image, switch selection
+        if (selectedImageId === id) {
+            if (newFiles.length > 0) {
+                // Select the last one added, or the first one
+                setSelectedImageId(newFiles[newFiles.length - 1].id);
+            } else {
+                setSelectedImageId(undefined);
+                setViewMode('grid'); // Reset to grid if empty
+            }
+        }
+        return newFiles;
+    });
   };
 
   const handleStartProcess = () => {
@@ -148,7 +167,7 @@ const App = () => {
     );
   };
 
-  const handleManualMaskProcess = async (id: string, maskData: string) => {
+  const handleManualMaskProcess = async (id: string, maskData: string, maskPrompt?: string) => {
      const imgFile = files.find(f => f.id === id);
      if (!imgFile) return;
 
@@ -158,8 +177,8 @@ const App = () => {
         const resultUrl = await processImageWithGemini(imgFile.file, {
             options,
             projectContext,
-            extraPrompt
-        }, maskData);
+            extraPrompt: maskPrompt || extraPrompt // Use mask specific prompt if available
+        }, maskData, maskPrompt);
         updateFileStatus(id, 'completed', resultUrl);
      } catch (error: any) {
         updateFileStatus(imgFile.id, 'error', undefined, error.message || 'Lỗi xử lý Mask');
@@ -236,7 +255,7 @@ const App = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen w-full bg-[#F4F7FA] dark:bg-[#051525] overflow-hidden text-slate-900 dark:text-slate-100 font-sans select-none relative transition-colors duration-300 bg-grid-pattern">
+    <div className="flex flex-col h-screen max-h-[100dvh] w-full bg-[#F4F7FA] dark:bg-[#051525] overflow-hidden text-slate-900 dark:text-slate-100 font-sans select-none relative transition-colors duration-300 bg-grid-pattern">
       
       <CostModal 
         isOpen={showCostModal}
@@ -247,10 +266,11 @@ const App = () => {
       />
 
         {/* --- MAIN HEADER --- */}
-        <header className="h-14 lg:h-16 bg-white/80 dark:bg-[#0C2B4E]/80 backdrop-blur-md border-b border-slate-200 dark:border-navy-700 flex items-center justify-between px-4 lg:px-6 shrink-0 z-50 transition-colors shadow-sm">
+        <header className="h-14 lg:h-16 bg-white/80 dark:bg-[#0C2B4E]/80 backdrop-blur-md border-b border-slate-200 dark:border-navy-700 flex items-center justify-between px-4 lg:px-6 shrink-0 z-50 transition-colors shadow-sm relative">
              {/* Left: Brand */}
              <div className="flex items-center gap-4">
-                 <div className="lg:hidden">
+                 {/* Mobile/Tablet Menu Button - Visible until XL */}
+                 <div className="xl:hidden">
                     <button onClick={() => setShowLeftPanel(!showLeftPanel)} className="p-2 text-teal-main dark:text-white hover:bg-slate-100 dark:hover:bg-navy-800 rounded-lg transition-colors"><Menu size={24} /></button>
                  </div>
                  <h1 className="text-xl lg:text-3xl font-black text-navy-900 dark:text-white tracking-tighter flex items-center gap-2">
@@ -271,13 +291,13 @@ const App = () => {
                     {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
                  </button>
 
-                 {/* Mobile Settings Toggle */}
-                 <div className="lg:hidden">
+                 {/* Mobile Settings Toggle - Visible until XL */}
+                 <div className="xl:hidden">
                     <button onClick={() => setShowRightPanel(!showRightPanel)} className="p-2 text-red-accent bg-red-accent/10 rounded-lg"><Sliders size={20} /></button>
                  </div>
                  
-                 {/* Desktop Shortcuts Hint */}
-                 <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-slate-50 dark:bg-navy-800 rounded border border-slate-200 dark:border-navy-700">
+                 {/* Desktop Shortcuts Hint - Visible only on XL+ */}
+                 <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 bg-slate-50 dark:bg-navy-800 rounded border border-slate-200 dark:border-navy-700">
                     <div className={`w-2 h-2 rounded-full ${globalCompareMode ? 'bg-red-accent animate-pulse' : 'bg-teal-main'}`} />
                     <span className="text-[10px] text-teal-main dark:text-slate-400 font-mono uppercase">
                         HOTKEYS: <strong className="text-navy-900 dark:text-white">Y</strong> (COMPARE) • <strong className="text-navy-900 dark:text-white">I</strong> (VIEW)
@@ -290,43 +310,49 @@ const App = () => {
       <div className="flex-1 flex overflow-hidden relative">
         
         {/* 1. LEFT SIDEBAR (Input/Settings) */}
+        {/* FIXED: Changed inset-0 to inset-y-0 left-0 to anchor correctly */}
         <aside className={`
-            fixed inset-y-0 left-0 z-40 bg-white dark:bg-[#0C2B4E] lg:bg-white dark:lg:bg-[#0C2B4E] border-r border-slate-200 dark:border-navy-700
-            transform transition-transform duration-300 ease-out lg:relative lg:transform-none lg:flex flex-col
+            fixed inset-y-0 left-0 z-50 bg-white dark:bg-[#0C2B4E] xl:bg-white dark:xl:bg-[#0C2B4E] 
+            xl:relative xl:inset-auto xl:z-40 border-r border-slate-200 dark:border-navy-700
+            transform transition-transform duration-300 ease-out xl:transform-none xl:flex flex-col
             ${showLeftPanel ? 'translate-x-0' : '-translate-x-full'}
-            w-[85vw] sm:w-[380px] lg:w-[320px] h-full shadow-2xl lg:shadow-none transition-colors
+            w-full sm:w-[380px] xl:w-[320px] h-full shadow-2xl xl:shadow-none transition-colors
         `}>
-             <div className="flex-1 overflow-hidden flex flex-col">
-                 <div className="lg:hidden p-4 flex justify-between items-center border-b border-slate-200 dark:border-navy-700 bg-white dark:bg-[#0C2B4E]">
+             <div className="flex-1 overflow-hidden flex flex-col h-full">
+                 {/* Header in mobile/tablet mode - Hidden on XL */}
+                 <div className="xl:hidden p-4 flex justify-between items-center border-b border-slate-200 dark:border-navy-700 bg-white dark:bg-[#0C2B4E] shrink-0">
                     <span className="font-bold text-teal-main dark:text-white uppercase tracking-widest text-sm">Cấu hình đầu vào</span>
-                    <button onClick={() => setShowLeftPanel(false)} className="text-slate-600 dark:text-slate-300 hover:text-red-accent"><ChevronRight /></button>
+                    <button onClick={() => setShowLeftPanel(false)} className="text-slate-600 dark:text-slate-300 hover:text-red-accent p-2"><ChevronRight /></button>
                  </div>
-                 <ControlPanel 
-                    options={options} 
-                    setOptions={setOptions}
-                    projectContext={projectContext}
-                    setProjectContext={setProjectContext}
-                    extraPrompt={extraPrompt}
-                    setExtraPrompt={setExtraPrompt}
-                    isMaskingMode={isMaskingMode}
-                    setIsMaskingMode={setIsMaskingMode}
-                    onFilesAdded={handleFilesAdded}
-                 />
+                 {/* Panel Container */}
+                 <div className="flex-1 min-h-0">
+                    <ControlPanel 
+                        options={options} 
+                        setOptions={setOptions}
+                        projectContext={projectContext}
+                        setProjectContext={setProjectContext}
+                        extraPrompt={extraPrompt}
+                        setExtraPrompt={setExtraPrompt}
+                        isMaskingMode={isMaskingMode}
+                        setIsMaskingMode={setIsMaskingMode}
+                        onFilesAdded={handleFilesAdded}
+                    />
+                 </div>
              </div>
         </aside>
 
-        {/* Backdrop for Mobile Left */}
-        {showLeftPanel && <div className="fixed inset-0 bg-black/50 z-30 lg:hidden backdrop-blur-sm" onClick={() => setShowLeftPanel(false)} />}
+        {/* Backdrop for Mobile Left - Hidden on XL */}
+        {showLeftPanel && <div className="fixed inset-0 bg-black/50 z-40 xl:hidden backdrop-blur-sm" onClick={() => setShowLeftPanel(false)} />}
 
 
         {/* 2. CENTER STAGE (Viewport) */}
-        <main className="flex-1 flex flex-col min-w-0 bg-transparent relative transition-colors">
+        <main className="flex-1 flex flex-col min-w-0 bg-transparent relative transition-colors h-full">
             
             {/* Viewport Area */}
-            <div className="flex-1 relative overflow-hidden flex flex-col">
-                {/* Filmstrip Toggle - Mobile Bottom Right */}
+            <div className="flex-1 relative overflow-hidden flex flex-col w-full h-full">
+                {/* Filmstrip Toggle - Mobile Bottom Right (Lifted above filmstrip) - Hidden on XL */}
                 {files.length > 0 && (
-                    <div className="lg:hidden absolute bottom-4 right-4 z-30 pointer-events-auto">
+                    <div className="xl:hidden absolute bottom-4 right-4 z-30 pointer-events-auto">
                         <button 
                             onClick={() => setShowFilmstrip(!showFilmstrip)}
                             className={`p-3 rounded-full shadow-xl flex items-center justify-center transition-all ${showFilmstrip ? 'bg-white dark:bg-navy-800 text-teal-main' : 'bg-teal-main text-white'}`}
@@ -338,52 +364,56 @@ const App = () => {
 
                 {files.length === 0 ? (
                     <div className="w-full h-full p-6 flex flex-col items-center justify-center overflow-y-auto">
-                         {/* Centered Image Uploader with Fixed Aspect Ratio - Fixes tablet stretching */}
                         <div className="w-full max-w-4xl aspect-[16/10] max-h-[80vh] rounded-3xl border-2 border-dashed border-slate-300 dark:border-navy-700 bg-white/60 dark:bg-navy-900/60 backdrop-blur-sm hover:bg-white dark:hover:bg-navy-800 hover:border-teal-main transition-all group relative flex flex-col shadow-sm hover:shadow-lg">
                              <ImageUploader onFilesAdded={handleFilesAdded} hasFiles={false} />
                         </div>
                     </div>
                 ) : (
-                    <>
-                        {/* Render View */}
-                        <div className="w-full h-full relative">
-                            {viewMode === 'single' && selectedImage && (
-                                <ImageCard 
-                                    image={selectedImage}
-                                    globalCompareMode={globalCompareMode}
-                                    viewMode="single"
-                                    isMaskingMode={isMaskingMode}
-                                    onManualProcess={handleManualMaskProcess}
-                                />
-                            )}
-                            {viewMode !== 'single' && (
-                                <div className="w-full h-full overflow-y-auto p-4 lg:p-8 custom-scrollbar">
-                                    <div className={`grid gap-6 pb-20 ${
-                                        viewMode === 'grid' 
-                                            ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4' 
-                                            : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
-                                    }`}>
-                                        {files.map(image => (
-                                            <div key={image.id} onClick={() => { setSelectedImageId(image.id); setViewMode('single'); }} className="cursor-pointer">
-                                                <ImageCard image={image} globalCompareMode={globalCompareMode} viewMode={viewMode} />
-                                            </div>
-                                        ))}
-                                    </div>
+                    /* Content Wrapper */
+                    <div className="w-full h-full relative flex flex-col overflow-hidden">
+                        {viewMode === 'single' && selectedImage && (
+                            <ImageCard 
+                                image={selectedImage}
+                                globalCompareMode={globalCompareMode}
+                                viewMode="single"
+                                isMaskingMode={isMaskingMode}
+                                onManualProcess={handleManualMaskProcess}
+                                onDelete={handleDeleteImage}
+                            />
+                        )}
+                        {viewMode !== 'single' && (
+                            <div className="w-full h-full overflow-y-auto p-4 lg:p-8 custom-scrollbar">
+                                <div className={`grid gap-6 pb-20 ${
+                                    viewMode === 'grid' 
+                                        ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4' 
+                                        : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
+                                }`}>
+                                    {files.map(image => (
+                                        <div key={image.id} onClick={() => { setSelectedImageId(image.id); setViewMode('single'); }} className="cursor-pointer">
+                                            <ImageCard 
+                                                image={image} 
+                                                globalCompareMode={globalCompareMode} 
+                                                viewMode={viewMode}
+                                                onDelete={handleDeleteImage}
+                                            />
+                                        </div>
+                                    ))}
                                 </div>
-                            )}
-                        </div>
-                    </>
+                            </div>
+                        )}
+                    </div>
                 )}
             </div>
 
-            {/* Bottom Filmstrip (Timeline) - Conditionally Rendered */}
+            {/* Bottom Filmstrip */}
             {files.length > 0 && (
-                <div className={`transition-all duration-300 ease-in-out overflow-hidden border-t border-slate-200 dark:border-navy-700 flex-shrink-0 ${showFilmstrip ? 'h-48' : 'h-0 border-none'}`}>
+                <div className={`transition-all duration-300 ease-in-out overflow-hidden border-t border-slate-200 dark:border-navy-700 flex-shrink-0 z-20 ${showFilmstrip ? 'h-48' : 'h-0 border-none'}`}>
                      <BottomFilmstrip 
                         files={files} 
                         onFilesAdded={handleFilesAdded}
                         selectedId={selectedImageId}
                         onSelect={(id) => { setSelectedImageId(id); }}
+                        onDelete={handleDeleteImage}
                     />
                 </div>
             )}
@@ -391,30 +421,36 @@ const App = () => {
 
 
         {/* 3. RIGHT SIDEBAR (Adjustments) */}
+        {/* FIXED: Changed inset-0 to inset-y-0 right-0 to ensure it hides off-screen on the RIGHT side */}
         <aside className={`
-            fixed inset-y-0 right-0 z-50 bg-white dark:bg-[#0C2B4E] lg:bg-white dark:lg:bg-[#0C2B4E] border-l border-slate-200 dark:border-navy-700
-            transform transition-transform duration-300 ease-out lg:relative lg:transform-none lg:flex flex-col
+            fixed inset-y-0 right-0 z-50 bg-white dark:bg-[#0C2B4E] xl:bg-white dark:xl:bg-[#0C2B4E] 
+            xl:relative xl:inset-auto xl:z-40 border-l border-slate-200 dark:border-navy-700
+            transform transition-transform duration-300 ease-out xl:transform-none xl:flex flex-col
             ${showRightPanel ? 'translate-x-0' : 'translate-x-full'}
-            w-[85vw] sm:w-[380px] lg:w-[350px] h-full shadow-2xl lg:shadow-none transition-colors
+            w-full sm:w-[380px] xl:w-[350px] h-full shadow-2xl xl:shadow-none transition-colors
         `}>
-             <div className="flex-1 overflow-hidden flex flex-col">
-                <div className="lg:hidden p-4 flex justify-between items-center border-b border-slate-200 dark:border-navy-700 bg-white dark:bg-[#0C2B4E]">
+             <div className="flex-1 overflow-hidden flex flex-col h-full">
+                {/* Header in mobile/tablet mode - Hidden on XL */}
+                <div className="xl:hidden p-4 flex justify-between items-center border-b border-slate-200 dark:border-navy-700 bg-white dark:bg-[#0C2B4E] shrink-0">
                     <span className="font-bold text-teal-main dark:text-white uppercase tracking-widest text-sm">Tinh chỉnh & Xuất</span>
-                    <button onClick={() => setShowRightPanel(false)} className="text-slate-600 dark:text-slate-300 hover:text-red-accent"><ChevronRight className="rotate-180"/></button>
+                    <button onClick={() => setShowRightPanel(false)} className="text-slate-600 dark:text-slate-300 hover:text-red-accent p-2"><ChevronRight className="rotate-180"/></button>
                  </div>
-                 <AdjustmentPanel 
-                    options={options}
-                    setOptions={setOptions}
-                    isProcessing={isProcessing}
-                    onProcess={handleStartProcess}
-                    files={files}
-                    onDownloadAll={handleDownloadAll}
-                 />
+                 {/* Panel Container */}
+                 <div className="flex-1 min-h-0">
+                    <AdjustmentPanel 
+                        options={options}
+                        setOptions={setOptions}
+                        isProcessing={isProcessing}
+                        onProcess={handleStartProcess}
+                        files={files}
+                        onDownloadAll={handleDownloadAll}
+                    />
+                 </div>
              </div>
         </aside>
 
-        {/* Backdrop for Mobile Right */}
-        {showRightPanel && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm" onClick={() => setShowRightPanel(false)} />}
+        {/* Backdrop for Mobile Right - Hidden on XL */}
+        {showRightPanel && <div className="fixed inset-0 bg-black/50 z-40 xl:hidden backdrop-blur-sm" onClick={() => setShowRightPanel(false)} />}
 
       </div>
     </div>
